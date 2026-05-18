@@ -1,5 +1,6 @@
 """
-components/sidebar.py — Sidebar controls: API key, mode, mood, voice, file upload, stats
+components/sidebar.py — Sidebar controls: mode, mood, voice, file upload, stats
+API key is loaded from .env automatically — no user input needed.
 """
 import streamlit as st
 from constants.chat_data import APP_NAME, APP_VERSION, MODES, MOODS, MODE_META
@@ -10,33 +11,24 @@ from services.llm_service import transcribe_audio
 def render_header() -> None:
     st.markdown(f"""
     <div style="text-align:center;padding:1.5rem 0 0.8rem;">
-        <div style="font-size:3.5rem;line-height:1;
-            animation:float 3s ease-in-out infinite;
-            display:inline-block;">🌸</div>
+        <div style="font-size:4rem;line-height:1;margin-bottom:.3rem;display:inline-block;">🌸</div>
         <h1 style="
             font-family:'Playfair Display',serif;
-            background:linear-gradient(135deg,#ff7eb6,#a78bfa);
-            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-            background-clip:text;
+            color:#ff7eb6;
             font-size:2.8rem;margin:.3rem 0 .1rem;letter-spacing:0.02em;
+            text-shadow:0 0 40px rgba(244,67,138,0.45);
         ">{APP_NAME}</h1>
-        <p style="color:rgba(255,192,220,0.7);font-size:0.9rem;margin:0;
+        <p style="color:rgba(255,192,220,0.65);font-size:0.88rem;margin:0;
             font-family:'Tajawal',sans-serif;">مساعدتك الذكية الشخصية ✨</p>
-        <div style="display:flex;justify-content:center;gap:7px;margin-top:.8rem;">
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:.9rem;">
             <span style="width:8px;height:8px;border-radius:50%;background:#f43f8a;
-                display:inline-block;animation:blink 1.4s ease-in-out infinite;
-                box-shadow:0 0 8px rgba(244,63,138,0.6);"></span>
+                display:inline-block;box-shadow:0 0 8px rgba(244,63,138,.6);"></span>
             <span style="width:8px;height:8px;border-radius:50%;background:#a78bfa;
-                display:inline-block;animation:blink 1.4s ease-in-out .2s infinite;
-                box-shadow:0 0 8px rgba(167,139,250,0.6);"></span>
+                display:inline-block;box-shadow:0 0 8px rgba(167,139,250,.6);"></span>
             <span style="width:8px;height:8px;border-radius:50%;background:#f43f8a;
-                display:inline-block;animation:blink 1.4s ease-in-out .4s infinite;
-                box-shadow:0 0 8px rgba(244,63,138,0.6);"></span>
+                display:inline-block;box-shadow:0 0 8px rgba(244,63,138,.6);"></span>
         </div>
     </div>
-    <style>
-    @keyframes float{{0%,100%{{transform:translateY(0);}}50%{{transform:translateY(-7px);}}}}
-    </style>
     """, unsafe_allow_html=True)
 
 
@@ -45,15 +37,15 @@ def render_mode_banner(mode: str) -> None:
     st.markdown(f"""
     <div style="
         background:{meta['bg']};
-        border-radius:18px;
-        padding:.65rem 1.4rem;
+        border-radius:20px;
+        padding:.7rem 1.4rem;
         border:1px solid {meta['border']};
         margin-bottom:1rem;
         text-align:center;
         backdrop-filter:blur(10px);
-        box-shadow:0 4px 20px {meta['shadow']};
+        box-shadow:0 4px 24px {meta['shadow']};
     ">
-        <span style="color:{meta['fg']};font-weight:700;font-size:.9rem;
+        <span style="color:{meta['fg']};font-weight:700;font-size:.92rem;
             letter-spacing:0.02em;">{meta['label']}</span>
     </div>""", unsafe_allow_html=True)
 
@@ -62,39 +54,20 @@ def render_sidebar(state: dict) -> dict:
     pending_voice = None
 
     with st.sidebar:
-        # Brand
+        # ── Brand ──────────────────────────────────────────
         st.markdown("""
         <div style="text-align:center;padding:.6rem 0 .4rem;">
-            <span style="font-size:2.2rem;">🌸</span>
+            <span style="font-size:2.4rem;display:inline-block;">🌸</span>
             <h2 style="margin:.2rem 0 0;font-family:'Playfair Display',serif;
-                color:#ff7eb6 !important;font-size:1.6rem;">AYA AI</h2>
-            <p style="font-size:.75rem;color:rgba(255,192,220,0.6);margin:0;">
-                مساعدتك الذكية الشخصية</p>
+                color:#ff7eb6 !important;font-size:1.7rem;">AYA AI</h2>
+            <p style="font-size:.75rem;color:rgba(255,192,220,0.55);margin:0;">
+                مساعدتك الذكية الشخصية 💕</p>
         </div>""", unsafe_allow_html=True)
 
         st.divider()
 
-        # API Key
-        st.markdown('<p style="color:rgba(255,192,220,0.8);font-size:.8rem;font-weight:600;margin-bottom:4px;">🔑 Groq API Key</p>', unsafe_allow_html=True)
-        api_key = st.text_input(
-            "api_key_input",
-            type="password",
-            value=state.get("api_key", ""),
-            placeholder="gsk_...",
-            help="مجاني 100% من: https://console.groq.com",
-            label_visibility="collapsed",
-        )
-        st.markdown(
-            '<a href="https://console.groq.com" target="_blank" '
-            'style="color:#a78bfa;font-size:.72rem;text-decoration:none;">'
-            '← احصلي على مفتاح مجاني</a>',
-            unsafe_allow_html=True,
-        )
-
-        st.divider()
-
-        # Mode
-        st.markdown('<p style="color:rgba(255,192,220,0.8);font-size:.8rem;font-weight:600;margin-bottom:4px;">✨ الوضع</p>', unsafe_allow_html=True)
+        # ── Mode ──────────────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">✨ الوضع</p>', unsafe_allow_html=True)
         mode = st.radio(
             "mode_radio",
             MODES,
@@ -104,8 +77,8 @@ def render_sidebar(state: dict) -> dict:
 
         st.divider()
 
-        # Mood
-        st.markdown('<p style="color:rgba(255,192,220,0.8);font-size:.8rem;font-weight:600;margin-bottom:4px;">💕 كيف حالك؟</p>', unsafe_allow_html=True)
+        # ── Mood ──────────────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">💕 كيف حالك؟</p>', unsafe_allow_html=True)
         mood = st.radio(
             "mood_radio",
             MOODS,
@@ -115,8 +88,8 @@ def render_sidebar(state: dict) -> dict:
 
         st.divider()
 
-        # Voice output toggle
-        st.markdown('<p style="color:rgba(255,192,220,0.8);font-size:.8rem;font-weight:600;margin-bottom:4px;">🔊 الصوت</p>', unsafe_allow_html=True)
+        # ── Voice output toggle ────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">🔊 الصوت</p>', unsafe_allow_html=True)
         voice_output = st.toggle(
             "ردود صوتية تلقائية 🔊",
             value=state.get("voice_output", False),
@@ -124,10 +97,10 @@ def render_sidebar(state: dict) -> dict:
 
         st.divider()
 
-        # ── FILE UPLOAD ──────────────────────────────────
-        st.markdown('<p style="color:rgba(255,192,220,0.8);font-size:.8rem;font-weight:600;margin-bottom:4px;">📎 رفع ملف</p>', unsafe_allow_html=True)
+        # ── File Upload ───────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">📎 رفع ملف</p>', unsafe_allow_html=True)
         st.markdown(
-            '<p style="color:rgba(255,192,220,0.55);font-size:.75rem;margin-bottom:.4rem;">'
+            '<p style="color:rgba(255,192,220,0.5);font-size:.73rem;margin-bottom:.4rem;">'
             'PDF، Word، كود، صور 🌸</p>',
             unsafe_allow_html=True,
         )
@@ -147,8 +120,8 @@ def render_sidebar(state: dict) -> dict:
 
         if st.session_state.get("file_name"):
             st.markdown(
-                f'<div style="background:rgba(244,67,138,0.1);border-radius:10px;'
-                f'padding:.4rem .8rem;font-size:.78rem;'
+                f'<div style="background:rgba(244,67,138,0.1);border-radius:12px;'
+                f'padding:.4rem .9rem;font-size:.78rem;'
                 f'color:rgba(255,192,220,0.85);border:1px solid rgba(244,67,138,0.25);">'
                 f'📎 <b style="color:#ff7eb6;">{st.session_state.file_name}</b></div>',
                 unsafe_allow_html=True,
@@ -156,48 +129,40 @@ def render_sidebar(state: dict) -> dict:
 
         st.divider()
 
-        # ── VOICE INPUT ──────────────────────────────────
-        st.markdown('<p style="color:rgba(255,192,220,0.8);font-size:.8rem;font-weight:600;margin-bottom:4px;">🎙️ رسالة صوتية</p>', unsafe_allow_html=True)
+        # ── Voice Input ───────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">🎙️ رسالة صوتية</p>', unsafe_allow_html=True)
 
-        if not api_key:
-            st.markdown(
-                '<p style="color:rgba(255,192,220,0.45);font-size:.75rem;">أضيفي API Key أولاً 💕</p>',
-                unsafe_allow_html=True,
+        try:
+            audio_value = st.audio_input("🎙️ اضغطي لتسجيل رسالة", key="sidebar_audio")
+            if audio_value is not None:
+                with st.spinner("🌸 بتحوّل الكلام لنص..."):
+                    try:
+                        transcribed = transcribe_audio(audio_value.read(), "recording.wav")
+                        if transcribed:
+                            st.success(f"✅ **{transcribed}** ✨")
+                            pending_voice = transcribed
+                    except Exception as e:
+                        st.error(f"😔 مشكلة: {e}")
+        except Exception:
+            voice_upload = st.file_uploader(
+                "📤 ارفعي ملف صوتي",
+                type=["wav", "mp3", "m4a", "ogg", "webm"],
+                key="voice_upload_sidebar",
             )
-        else:
-            try:
-                audio_value = st.audio_input("🎙️ اضغطي لتسجيل رسالة", key="sidebar_audio")
-                if audio_value is not None:
-                    with st.spinner("🌸 بتحوّل الكلام لنص..."):
-                        try:
-                            from services.llm_service import transcribe_audio
-                            transcribed = transcribe_audio(api_key, audio_value.read(), "recording.wav")
-                            if transcribed:
-                                st.success(f"✅ **{transcribed}**")
-                                pending_voice = transcribed
-                        except Exception as e:
-                            st.error(f"😔 مشكلة: {e}")
-            except Exception:
-                voice_upload = st.file_uploader(
-                    "📤 ارفعي ملف صوتي",
-                    type=["wav", "mp3", "m4a", "ogg", "webm"],
-                    key="voice_upload_sidebar",
-                )
-                if voice_upload:
-                    with st.spinner("🌸 بتحوّل الكلام لنص..."):
-                        try:
-                            from services.llm_service import transcribe_audio
-                            transcribed = transcribe_audio(api_key, voice_upload.read(), voice_upload.name)
-                            if transcribed:
-                                st.success(f"✅ **{transcribed}**")
-                                pending_voice = transcribed
-                        except Exception as e:
-                            st.error(f"😔 مشكلة: {e}")
+            if voice_upload:
+                with st.spinner("🌸 بتحوّل الكلام لنص..."):
+                    try:
+                        transcribed = transcribe_audio(voice_upload.read(), voice_upload.name)
+                        if transcribed:
+                            st.success(f"✅ **{transcribed}** ✨")
+                            pending_voice = transcribed
+                    except Exception as e:
+                        st.error(f"😔 مشكلة: {e}")
 
         st.divider()
 
-        # Stats
-        st.markdown('<p style="color:rgba(255,192,220,0.8);font-size:.8rem;font-weight:600;margin-bottom:6px;">📊 إحصائياتك</p>', unsafe_allow_html=True)
+        # ── Stats ─────────────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:6px;letter-spacing:.02em;">📊 إحصائياتك</p>', unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
             st.metric("💬 رسائل", state.get("total_messages", 0))
@@ -210,14 +175,13 @@ def render_sidebar(state: dict) -> dict:
 
         st.markdown(f"""
         <div style="text-align:center;padding:1rem 0 0;
-            color:rgba(255,192,220,0.4);font-size:.7rem;line-height:1.8;">
+            color:rgba(255,192,220,0.35);font-size:.7rem;line-height:2;">
             Made with 💕 especially for Aya<br>
-            Powered by <b style="color:rgba(255,192,220,0.6);">Groq</b> ⚡<br>
-            <span style="font-size:.6rem;opacity:.6;">v{APP_VERSION}</span>
+            Powered by <b style="color:rgba(255,192,220,0.55);">Groq</b> ⚡<br>
+            <span style="font-size:.65rem;opacity:.7;">v{APP_VERSION}</span>
         </div>""", unsafe_allow_html=True)
 
     return {
-        "api_key": api_key,
         "mode": mode,
         "mood": mood,
         "voice_output": voice_output,

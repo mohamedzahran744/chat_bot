@@ -6,7 +6,7 @@ import os
 
 APP_NAME    = "AYA AI"
 APP_SLOGAN  = "مساعدتك الذكية الشخصية ✨"
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
 
 GROQ_MODEL  = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 MAX_TOKENS  = int(os.getenv("MAX_TOKENS", "1500"))

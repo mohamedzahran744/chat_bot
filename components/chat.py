@@ -74,10 +74,10 @@ def build_file_context(extracted_text: str, file_label: str, filename: str) -> s
 # FILE UPLOAD WIDGET
 # ─────────────────────────────────────────────
 def render_file_upload() -> None:
-    with st.expander("📎 ارفعي ملف أو صورة", expanded=False):
+    with st.expander("📎 ارفعي ملف أو صورة 🌸", expanded=False):
         st.markdown(
             '<p style="color:rgba(255,192,220,0.7);font-size:.85rem;margin-bottom:.5rem;">'
-            "PDF، Word، Python، C++، TXT، JSON، CSV، صور 🌸</p>",
+            "PDF، Word، Python، C++، TXT، JSON، CSV، صور 💕</p>",
             unsafe_allow_html=True,
         )
         uploaded = st.file_uploader(
@@ -96,8 +96,8 @@ def render_file_upload() -> None:
 
     if st.session_state.file_name:
         st.markdown(
-            f'<div style="background:rgba(244,67,138,0.1);border-radius:14px;'
-            f'padding:.5rem 1rem;margin-bottom:.5rem;'
+            f'<div style="background:rgba(244,67,138,0.1);border-radius:16px;'
+            f'padding:.5rem 1.1rem;margin-bottom:.5rem;'
             f'border:1px solid rgba(244,67,138,0.25);font-size:.85rem;'
             f'color:rgba(255,192,220,0.85);">'
             f'📎 ملف محمّل: <b style="color:#ff7eb6;">{st.session_state.file_name}</b>'
@@ -109,15 +109,15 @@ def render_file_upload() -> None:
 # ─────────────────────────────────────────────
 # VOICE INPUT WIDGET
 # ─────────────────────────────────────────────
-def render_voice_input(api_key: str) -> str | None:
+def render_voice_input() -> str | None:
     st.markdown("""
-    <div style="background:rgba(255,255,255,0.05);border:1.5px dashed rgba(244,67,138,0.3);
-        border-radius:18px;padding:1rem 1.2rem;text-align:center;margin-bottom:.5rem;">
-        <div style="font-size:1.8rem;">🎙️</div>
-        <p style="color:#ff7eb6;font-weight:600;margin:.3rem 0 .1rem;font-size:.9rem;">
-            سجلي رسالتك الصوتية</p>
+    <div style="background:rgba(255,255,255,0.04);border:1.5px dashed rgba(244,67,138,0.35);
+        border-radius:20px;padding:1.1rem 1.2rem;text-align:center;margin-bottom:.5rem;">
+        <div style="font-size:2rem;">🎙️</div>
+        <p style="color:#ff7eb6;font-weight:700;margin:.3rem 0 .1rem;font-size:.95rem;">
+            سجلي رسالتك الصوتية 🌸</p>
         <p style="color:rgba(255,192,220,0.5);font-size:.78rem;margin:0;">
-            اضغطي للتسجيل ثم ارسلي</p>
+            اضغطي للتسجيل ثم ارسلي 💕</p>
     </div>""", unsafe_allow_html=True)
 
     transcribed = None
@@ -127,7 +127,7 @@ def render_voice_input(api_key: str) -> str | None:
         if audio_value is not None:
             with st.spinner("🌸 بتحوّل الكلام لنص..."):
                 try:
-                    transcribed = transcribe_audio(api_key, audio_value.read(), "recording.wav")
+                    transcribed = transcribe_audio(audio_value.read(), "recording.wav")
                 except Exception as e:
                     st.error(f"😔 مشكلة في الصوت: {e}")
     except Exception:
@@ -139,12 +139,12 @@ def render_voice_input(api_key: str) -> str | None:
         if uploaded:
             with st.spinner("🌸 بتحوّل الكلام لنص..."):
                 try:
-                    transcribed = transcribe_audio(api_key, uploaded.read(), uploaded.name)
+                    transcribed = transcribe_audio(uploaded.read(), uploaded.name)
                 except Exception as e:
                     st.error(f"😔 مشكلة: {e}")
 
     if transcribed:
-        st.success(f"✅ تم التعرف على: **{transcribed}**")
+        st.success(f"✅ تم التعرف على: **{transcribed}** ✨")
 
     return transcribed
 
@@ -153,10 +153,8 @@ def render_voice_input(api_key: str) -> str | None:
 # QUICK ACTION BUTTONS
 # ─────────────────────────────────────────────
 def render_quick_actions() -> None:
-    from constants.chat_data import CODING_CHALLENGES as CC
-
     idx             = get_today_index()
-    today_challenge = CC[idx % len(CC)]
+    today_challenge = CODING_CHALLENGES[idx % len(CODING_CHALLENGES)]
     mode            = st.session_state.mode
     q_list          = QUICK_PROMPTS.get(mode, QUICK_PROMPTS["💬 عام"])
 
@@ -164,8 +162,8 @@ def render_quick_actions() -> None:
         return
 
     st.markdown(
-        '<p style="color:rgba(255,192,220,0.6);font-size:.78rem;'
-        'font-weight:600;margin:.4rem 0 .3rem;letter-spacing:0.04em;">⚡ اختصارات سريعة</p>',
+        '<p style="color:rgba(255,192,220,0.7);font-size:.82rem;'
+        'font-weight:700;margin:.4rem 0 .3rem;letter-spacing:0.04em;">⚡ اختصارات سريعة ✨</p>',
         unsafe_allow_html=True,
     )
 
@@ -180,41 +178,47 @@ def render_quick_actions() -> None:
 
 
 # ─────────────────────────────────────────────
-# EMPTY STATE
+# EMPTY STATE ✅ FIXED
 # ─────────────────────────────────────────────
 def render_empty_state() -> None:
-    st.markdown("""
-    <div style="text-align:center;padding:3rem 1rem;opacity:0.85;">
-        <div style="font-size:4rem;line-height:1;margin-bottom:1rem;
-            animation:float 3s ease-in-out infinite;display:inline-block;">🌸</div>
-        <h2 style="
-            font-family:'Playfair Display',serif;
-            background:linear-gradient(135deg,#ff7eb6,#a78bfa);
-            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-            background-clip:text;font-size:1.8rem;margin:.5rem 0;
-        ">مرحباً يا آية! 💕</h2>
-        <p style="color:rgba(255,192,220,0.6);font-size:.95rem;max-width:380px;
-            margin:0 auto;line-height:1.7;">
-            أنا AYA AI ✨ — مساعدتك الذكية الشخصية<br>
-            اكتبي أي حاجة وأنا هنا 🌸
-        </p>
-        <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:1.5rem;
-            flex-wrap:wrap;">
-            <div style="background:rgba(244,67,138,0.1);border:1px solid rgba(244,67,138,0.25);
-                border-radius:14px;padding:.7rem 1.2rem;font-size:.82rem;
-                color:rgba(255,192,220,0.7);">🇨🇳 لغة صينية</div>
-            <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);
-                border-radius:14px;padding:.7rem 1.2rem;font-size:.82rem;
-                color:rgba(255,192,220,0.7);">💻 مساعدة برمجة</div>
-            <div style="background:rgba(244,67,138,0.1);border:1px solid rgba(244,67,138,0.25);
-                border-radius:14px;padding:.7rem 1.2rem;font-size:.82rem;
-                color:rgba(255,192,220,0.7);">📚 خطة مذاكرة</div>
-        </div>
-    </div>
-    <style>
-    @keyframes float{{0%,100%{{transform:translateY(0);}}50%{{transform:translateY(-8px);}}}}
-    </style>
-    """, unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    _, col, _ = st.columns([1, 3, 1])
+    with col:
+        st.markdown(
+            "<div style='text-align:center;font-size:4.5rem;margin-bottom:.5rem;'>🌸</div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<h2 style='text-align:center;color:#ff7eb6;"
+            "font-family:Tajawal,sans-serif;font-size:2rem;"
+            "text-shadow:0 0 30px rgba(244,67,138,0.4);'>"
+            "مرحباً يا آية! 💕</h2>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<p style='text-align:center;color:rgba(255,192,220,0.7);"
+            "font-size:.95rem;line-height:2;margin-bottom:1.5rem;'>"
+            "أنا <b style='color:#ff7eb6;'>AYA AI</b> ✨<br>"
+            "مساعدتك الذكية الشخصية<br>"
+            "اكتبي أي حاجة وأنا هنا 🌸💖</p>",
+            unsafe_allow_html=True,
+        )
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.button("🇨🇳 لغة صينية",   use_container_width=True, disabled=True, key="chip1")
+            st.button("📚 خطة مذاكرة",   use_container_width=True, disabled=True, key="chip2")
+        with c2:
+            st.button("💻 مساعدة برمجة", use_container_width=True, disabled=True, key="chip3")
+            st.button("💬 دردشة عامة",   use_container_width=True, disabled=True, key="chip4")
+
+        st.markdown(
+            "<div style='text-align:center;font-size:1.3rem;"
+            "letter-spacing:.5rem;opacity:.35;margin-top:1.2rem;'>"
+            "🌸 ✨ 💕 🎀 💖</div>",
+            unsafe_allow_html=True,
+        )
 
 
 # ─────────────────────────────────────────────
@@ -227,7 +231,7 @@ def render_chat_history() -> None:
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+            st.markdown(msg["content"], unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
@@ -246,7 +250,7 @@ def handle_chat_input() -> None:
 
     user_text = None
     if st.session_state.pending_input:
-        user_text                    = st.session_state.pending_input
+        user_text = st.session_state.pending_input
         st.session_state.pending_input = None
     elif typed_prompt:
         user_text = typed_prompt
@@ -254,27 +258,22 @@ def handle_chat_input() -> None:
     if not user_text:
         return
 
-    if not st.session_state.api_key:
-        st.error("💕 يا آية، محتاجة تضعي Groq API Key في الـ Sidebar الأول!")
-        st.stop()
-
     with st.chat_message("user"):
-        st.markdown(user_text)
+        st.markdown(user_text, unsafe_allow_html=True)
 
     st.session_state.messages.append({"role": "user", "content": user_text})
     st.session_state.total_messages += 1
 
     with st.chat_message("assistant"):
-        with st.spinner("⏳ AYA AI بتفكر... 🌸"):
+        with st.spinner("🌸 AYA AI بتفكر لحظة..."):
             try:
                 reply = chat_with_aya(
-                    api_key      = st.session_state.api_key,
-                    messages     = st.session_state.messages,
-                    mode         = st.session_state.mode,
-                    mood         = st.session_state.mood,
-                    extra_context= st.session_state.file_context,
+                    messages=st.session_state.messages,
+                    mode=st.session_state.mode,
+                    mood=st.session_state.mood,
+                    extra_context=st.session_state.file_context,
                 )
-                st.markdown(reply)
+                st.markdown(reply, unsafe_allow_html=True)
 
                 if st.session_state.voice_output:
                     try:
@@ -288,12 +287,16 @@ def handle_chat_input() -> None:
 
             except Exception as e:
                 err_msg = str(e)
-                if "api_key" in err_msg.lower() or "authentication" in err_msg.lower():
-                    st.error("🔑 الـ API Key غلط يا آية! تأكدي منه من console.groq.com")
+                if "GROQ_API_KEY" in err_msg or "authentication" in err_msg.lower():
+                    st.error(
+                        "🔑 مفتاح Groq API مش موجود!\n\n"
+                        "أضيفي ملف `.env` وحطي فيه:\n"
+                        "`GROQ_API_KEY=gsk_xxxxxxxxxxxx`\n\n"
+                        "احصلي على مفتاح مجاني من: https://console.groq.com 💕"
+                    )
                 elif "rate_limit" in err_msg.lower():
-                    st.warning("⏳ الـ API وصلت للحد — انتظري ثانية وحاولي تاني!")
+                    st.warning("⏳ الـ API وصلت للحد — انتظري ثانية وحاولي تاني! 🌸")
                 else:
                     st.error(f"😔 في مشكلة صغيرة يا آية: `{err_msg}`")
-                # pop the user message we just added so chat stays clean
                 if st.session_state.messages:
                     st.session_state.messages.pop()

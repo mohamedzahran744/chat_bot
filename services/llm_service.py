@@ -1,55 +1,78 @@
 """
 services/llm_service.py — Groq API chat + gTTS voice + Whisper transcription
+API key is loaded from environment / .env file only — never from user input.
 """
 import io
+import os
+import re
 from groq import Groq
 from gtts import gTTS
 from constants.chat_data import GROQ_MODEL, MAX_TOKENS, TEMPERATURE
 from constants.system_prompt import get_system_prompt
 
+# Load .env if present
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
-def get_groq_client(api_key: str) -> Groq:
-    if not api_key or not api_key.strip():
-        raise ValueError("الـ API Key فاضي — حطي مفتاحك من console.groq.com")
-    return Groq(api_key=api_key.strip())
+_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+
+
+def _get_client() -> Groq:
+    key = _API_KEY.strip()
+    if not key:
+        raise ValueError(
+            "🔑 GROQ_API_KEY غير موجود!\n"
+            "أضيفي مفتاحك في ملف .env:\n"
+            "GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxx\n"
+            "احصلي على مفتاح مجاني من: https://console.groq.com"
+        )
+    return Groq(api_key=key)
+
+
+def _clean_reply(text: str) -> str:
+    """Strip ```html / ``` wrappers the model sometimes adds."""
+    text = text.strip()
+    text = re.sub(r'^```[\w]*\n?', '', text)   # remove opening ```html or ```
+    text = re.sub(r'\n?```$', '', text)         # remove closing ```
+    return text.strip()
 
 
 def chat_with_aya(
-    api_key: str,
     messages: list[dict],
     mode: str,
     mood: str,
     extra_context: str = "",
 ) -> str:
     """Send conversation to Groq, return assistant reply (text only)."""
-    client = get_groq_client(api_key)
+    client = _get_client()
 
     system = get_system_prompt(mode, mood)
     if extra_context:
         system += f"\n\n[CONTEXT]\n{extra_context}\n[END CONTEXT]"
 
-    # Strip any non-standard keys before sending to Groq
     clean_messages = [
         {"role": m.get("role", "user"), "content": str(m.get("content", ""))}
         for m in messages
         if m.get("role") in ("user", "assistant")
     ]
 
-    # Keep last 30 messages to avoid token overflow
     if len(clean_messages) > 30:
         clean_messages = clean_messages[-30:]
 
     response = client.chat.completions.create(
-        model       = GROQ_MODEL,
-        messages    = [{"role": "system", "content": system}, *clean_messages],
-        max_tokens  = MAX_TOKENS,
-        temperature = TEMPERATURE,
+        model=GROQ_MODEL,
+        messages=[{"role": "system", "content": system}, *clean_messages],
+        max_tokens=MAX_TOKENS,
+        temperature=TEMPERATURE,
     )
-    return response.choices[0].message.content
+    return _clean_reply(response.choices[0].message.content)  # ✅ FIX
 
 
 def text_to_speech(text: str, lang: str = "ar") -> bytes:
-    """Convert text → MP3 bytes via gTTS. Auto-detects Arabic/Chinese/English."""
+    """Convert text → MP3 bytes via gTTS."""
     sample = text[:100]
 
     if any("\u4e00" <= c <= "\u9fff" for c in sample):
@@ -62,12 +85,10 @@ def text_to_speech(text: str, lang: str = "ar") -> bytes:
     else:
         lang = "ar"
 
-    # Clean text: remove markdown code blocks for TTS
-    import re
     clean = re.sub(r"```[\s\S]*?```", " كود برمجي ", text)
     clean = re.sub(r"`[^`]+`", "", clean)
     clean = re.sub(r"[#*_~>\[\]()]", "", clean).strip()
-    clean = clean[:2000]  # gTTS limit
+    clean = clean[:2000]
 
     tts = gTTS(text=clean, lang=lang, slow=False)
     buf = io.BytesIO()
@@ -76,15 +97,15 @@ def text_to_speech(text: str, lang: str = "ar") -> bytes:
     return buf.read()
 
 
-def transcribe_audio(api_key: str, audio_bytes: bytes, filename: str = "audio.wav") -> str:
+def transcribe_audio(audio_bytes: bytes, filename: str = "audio.wav") -> str:
     """Transcribe audio via Groq Whisper. Returns plain text."""
-    client     = get_groq_client(api_key)
+    client = _get_client()
     audio_file = (filename, audio_bytes, "audio/wav")
 
     transcription = client.audio.transcriptions.create(
-        model           = "whisper-large-v3",
-        file            = audio_file,
-        response_format = "text",
+        model="whisper-large-v3",
+        file=audio_file,
+        response_format="text",
     )
 
     if isinstance(transcription, str):
