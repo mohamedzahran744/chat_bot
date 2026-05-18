@@ -1,364 +1,190 @@
 """
-AYA AI ✨ — Beautiful AI Assistant
-Run: streamlit run app.py
-API key is loaded from .env automatically — no user input needed!
+components/sidebar.py — Sidebar controls: mode, mood, voice, file upload, stats
+API key is loaded from .env automatically — no user input needed.
 """
-
 import streamlit as st
-
-st.set_page_config(
-    page_title="AYA AI ✨",
-    page_icon="🌸",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-from components.sidebar import render_sidebar, render_header, render_mode_banner
-from components.chat import render_chat_history, handle_chat_input
+from constants.chat_data import APP_NAME, APP_VERSION, MODES, MOODS, MODE_META
+from components.chat import extract_text_from_file, build_file_context
+from services.llm_service import transcribe_audio
 
 
-# ── CUSTOM CSS — extra cute dark glassmorphism ─────────────────
-def load_custom_ui():
-    st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Playfair+Display:wght@400;700&family=Fira+Code:wght@400;500&display=swap');
-
-    :root {
-        --rose:       #f43f8a;
-        --rose-light: #ff7eb6;
-        --plum:       #7c3aed;
-        --plum-light: #a78bfa;
-    }
-
-    html, body, [class*="css"] {
-        font-family: 'Tajawal', sans-serif !important;
-        direction: rtl;
-    }
-
-    /* ── ANIMATED BACKGROUND ── */
-    .stApp {
-        background:
-            radial-gradient(ellipse 90% 60% at 15% 5%,  rgba(244,67,138,.18) 0%, transparent 55%),
-            radial-gradient(ellipse 70% 70% at 85% 85%, rgba(124,58,237,.15) 0%, transparent 55%),
-            radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,126,182,.06) 0%, transparent 65%),
-            linear-gradient(160deg, #1a0010 0%, #2d0a1f 40%, #1a0535 70%, #2d0a1f 100%) !important;
-        min-height: 100vh;
-        position: relative;
-        overflow-x: hidden;
-    }
-
-    /* Sparkle overlay */
-    .stApp::before {
-        content: '';
-        position: fixed;
-        inset: 0;
-        background:
-            radial-gradient(ellipse 80% 50% at 20% 10%, rgba(244,67,138,.12) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 60% at 80% 80%, rgba(124,58,237,.1) 0%, transparent 60%);
-        pointer-events: none;
-        z-index: 0;
-        animation: bgPulse 9s ease-in-out infinite alternate;
-    }
-    @keyframes bgPulse { 0% { opacity:.65; } 100% { opacity:1; } }
-
-    /* Floating petals */
-    .stApp::after {
-        content: '🌸✨💕🌸✨💖🎀';
-        position: fixed;
-        top: -60px;
-        left: 0; right: 0;
-        font-size: 1.4rem;
-        letter-spacing: 7rem;
-        white-space: nowrap;
-        opacity: 0.06;
-        animation: petalFall 25s linear infinite;
-        pointer-events: none;
-        z-index: 0;
-    }
-    @keyframes petalFall {
-        0%   { transform: translateY(-60px) rotate(0deg);   opacity: .04; }
-        50%  { opacity: .09; }
-        100% { transform: translateY(110vh) rotate(360deg); opacity: .03; }
-    }
-
-    /* ── SIDEBAR ── */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(160deg,
-            rgba(45,10,31,.97) 0%,
-            rgba(26,5,50,.97)  100%) !important;
-        border-right: 1px solid rgba(244,67,138,.22) !important;
-        box-shadow: 4px 0 32px rgba(0,0,0,.45) !important;
-    }
-    [data-testid="stSidebar"] * { color: #f0d0e0 !important; }
-    [data-testid="stSidebar"] h1,
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3 { color: #ff7eb6 !important; }
-
-    [data-testid="stSidebar"] .stRadio label {
-        background: rgba(255,255,255,.05) !important;
-        border: 1px solid rgba(244,67,138,.2) !important;
-        border-radius: 16px !important;
-        padding: .45rem 1rem !important;
-        color: #f0d0e0 !important;
-        transition: all .2s !important;
-        font-size: .88rem !important;
-    }
-    [data-testid="stSidebar"] .stRadio label:hover {
-        background: rgba(244,67,138,.15) !important;
-        border-color: var(--rose) !important;
-        transform: translateX(-2px) !important;
-    }
-
-    [data-testid="stSidebar"] [data-testid="metric-container"] {
-        background: rgba(255,255,255,.06) !important;
-        border: 1px solid rgba(244,67,138,.2) !important;
-        border-radius: 16px !important;
-        padding: .8rem !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stMetricValue"] {
-        color: #ff7eb6 !important;
-        font-size: 1.5rem !important;
-        font-family: 'Playfair Display', serif !important;
-    }
-
-    /* ── MAIN CONTENT ── */
-    .main .block-container {
-        padding: 1rem 1.5rem 2rem !important;
-        max-width: 920px !important;
-        position: relative;
-        z-index: 1;
-    }
-
-    /* ── BUTTONS ── */
-    .stButton > button {
-        background: linear-gradient(135deg, var(--rose), var(--plum)) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 28px !important;
-        font-family: 'Tajawal', sans-serif !important;
-        font-weight: 700 !important;
-        font-size: .88rem !important;
-        padding: .52rem 1.5rem !important;
-        box-shadow: 0 4px 22px rgba(244,67,138,.35) !important;
-        transition: all .28s cubic-bezier(.34,1.56,.64,1) !important;
-        letter-spacing: .01em !important;
-    }
-    .stButton > button:hover {
-        transform: translateY(-4px) scale(1.04) !important;
-        box-shadow: 0 12px 34px rgba(244,67,138,.55) !important;
-    }
-    .stButton > button:active { transform: translateY(-1px) scale(.97) !important; }
-
-    /* Sidebar clear btn */
-    [data-testid="stSidebar"] .stButton > button {
-        background: linear-gradient(135deg,rgba(244,67,138,.18),rgba(124,58,237,.18)) !important;
-        border: 1px solid rgba(244,67,138,.3) !important;
-        color: #ff7eb6 !important;
-        box-shadow: none !important;
-    }
-    [data-testid="stSidebar"] .stButton > button:hover {
-        background: linear-gradient(135deg,rgba(239,68,68,.3),rgba(220,38,38,.2)) !important;
-        border-color: #ef4444 !important;
-        color: #fca5a5 !important;
-        box-shadow: 0 4px 18px rgba(239,68,68,.28) !important;
-    }
-
-    /* ── CHAT MESSAGES ── */
-    [data-testid="stChatMessage"] {
-        background: rgba(255,255,255,.055) !important;
-        border: 1px solid rgba(244,67,138,.14) !important;
-        border-radius: 22px !important;
-        backdrop-filter: blur(14px) !important;
-        margin-bottom: .85rem !important;
-        padding: .85rem 1.1rem !important;
-        animation: msgSlide .38s cubic-bezier(.34,1.2,.64,1) !important;
-        color: #f0d0e0 !important;
-    }
-    [data-testid="stChatMessage"] p,
-    [data-testid="stChatMessage"] li,
-    [data-testid="stChatMessage"] span { color: #f0d0e0 !important; }
-
-    [data-testid="stChatMessage"] code {
-        background: rgba(124,58,237,.25) !important;
-        color: #f0d0e0 !important;
-        border-radius: 7px !important;
-        font-family: 'Fira Code', monospace !important;
-        font-size: .84em !important;
-        padding: .15em .42em !important;
-    }
-    [data-testid="stChatMessage"] pre {
-        background: rgba(10,0,20,.62) !important;
-        border: 1px solid rgba(124,58,237,.3) !important;
-        border-radius: 16px !important;
-        padding: 1rem !important;
-    }
-    [data-testid="stChatMessage"] pre code {
-        background: transparent !important;
-        color: #e0c8f0 !important;
-        font-size: .85rem !important;
-    }
-
-    @keyframes msgSlide {
-        from { opacity:0; transform:translateY(14px) scale(.96); }
-        to   { opacity:1; transform:translateY(0)   scale(1);   }
-    }
-
-    /* ── CHAT INPUT ── */
-    [data-testid="stChatInput"] {
-        background: rgba(255,255,255,.07) !important;
-        border: 1.5px solid rgba(244,67,138,.3) !important;
-        border-radius: 30px !important;
-        backdrop-filter: blur(12px) !important;
-        transition: border-color .2s, box-shadow .2s !important;
-    }
-    [data-testid="stChatInput"]:focus-within {
-        border-color: var(--rose) !important;
-        box-shadow: 0 0 0 3px rgba(244,67,138,.16) !important;
-    }
-    [data-testid="stChatInput"] textarea {
-        color: #f0d0e0 !important;
-        font-family: 'Tajawal', sans-serif !important;
-        font-size: .95rem !important;
-    }
-    [data-testid="stChatInput"] textarea::placeholder {
-        color: rgba(240,208,224,.48) !important;
-    }
-
-    /* ── TEXT INPUTS ── */
-    .stTextInput > div > div > input,
-    .stTextArea > div > div > textarea {
-        background: rgba(255,255,255,.07) !important;
-        border: 1px solid rgba(244,67,138,.25) !important;
-        border-radius: 15px !important;
-        color: #f0d0e0 !important;
-        font-family: 'Tajawal', sans-serif !important;
-    }
-
-    /* ── EXPANDERS ── */
-    [data-testid="stExpander"] {
-        background: rgba(255,255,255,.045) !important;
-        border: 1px solid rgba(244,67,138,.2) !important;
-        border-radius: 20px !important;
-        backdrop-filter: blur(10px) !important;
-        margin-bottom: .6rem !important;
-    }
-    [data-testid="stExpander"] summary {
-        color: #ff7eb6 !important;
-        font-weight: 700 !important;
-    }
-
-    /* ── FILE UPLOADER ── */
-    [data-testid="stFileUploader"] {
-        background: rgba(255,255,255,.04) !important;
-        border: 2px dashed rgba(244,67,138,.3) !important;
-        border-radius: 20px !important;
-        padding: 1rem !important;
-        transition: border-color .2s !important;
-    }
-    [data-testid="stFileUploader"]:hover { border-color: var(--rose) !important; }
-
-    /* ── ALERTS ── */
-    .stAlert  { border-radius: 17px !important; border-left: 4px solid var(--rose) !important; background: rgba(244,67,138,.1) !important; }
-    .stSuccess{ border-left-color: #22c55e !important; background: rgba(34,197,94,.1)  !important; }
-    .stWarning{ border-left-color: #f59e0b !important; background: rgba(245,158,11,.1) !important; }
-    .stInfo   { background: rgba(124,58,237,.1) !important; border-left: 4px solid var(--plum-light) !important; border-radius: 15px !important; }
-
-    /* ── SPINNER ── */
-    .stSpinner > div { border-top-color: var(--rose) !important; }
-
-    /* ── DIVIDERS ── */
-    hr { border-color: rgba(244,67,138,.18) !important; }
-
-    /* ── SCROLLBAR ── */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: rgba(255,255,255,.03); }
-    ::-webkit-scrollbar-thumb { background: linear-gradient(var(--rose),var(--plum)); border-radius: 10px; }
-
-    /* ── MARKDOWN ── */
-    .stMarkdown p, .stMarkdown li, .stMarkdown span { color: #f0d0e0 !important; }
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 { color: #ff7eb6 !important; font-family: 'Playfair Display', serif !important; }
-    .stMarkdown strong { color: #ffc0dc !important; }
-    .stMarkdown a { color: var(--rose-light) !important; }
-
-    /* ── AUDIO ── */
-    audio { border-radius: 26px !important; width: 100% !important; margin-top: .5rem !important; filter: hue-rotate(300deg) !important; }
-
-    /* ── TOGGLE ── */
-    .stToggle label { color: #f0d0e0 !important; }
-
-    /* ── HIDE CHROME ── */
-    #MainMenu { visibility: hidden; }
-    footer { visibility: hidden; }
-    .stDeployButton { display: none; }
-    header[data-testid="stHeader"] { background: transparent !important; }
-
-    /* ── CUTE SPARKLE CURSOR ── (optional fun) ── */
-    @keyframes blink {
-        0%,100% { opacity:1; transform:scale(1); }
-        50%      { opacity:.3; transform:scale(.6); }
-    }
-    </style>
+def render_header() -> None:
+    st.markdown(f"""
+    <div style="text-align:center;padding:1.5rem 0 0.8rem;">
+        <div style="font-size:4rem;line-height:1;margin-bottom:.3rem;display:inline-block;">🌸</div>
+        <h1 style="
+            font-family:'Playfair Display',serif;
+            color:#ff7eb6;
+            font-size:2.8rem;margin:.3rem 0 .1rem;letter-spacing:0.02em;
+            text-shadow:0 0 40px rgba(244,67,138,0.45);
+        ">{APP_NAME}</h1>
+        <p style="color:rgba(255,192,220,0.65);font-size:0.88rem;margin:0;
+            font-family:'Tajawal',sans-serif;">مساعدتك الذكية الشخصية ✨</p>
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:.9rem;">
+            <span style="width:8px;height:8px;border-radius:50%;background:#f43f8a;
+                display:inline-block;box-shadow:0 0 8px rgba(244,63,138,.6);"></span>
+            <span style="width:8px;height:8px;border-radius:50%;background:#a78bfa;
+                display:inline-block;box-shadow:0 0 8px rgba(167,139,250,.6);"></span>
+            <span style="width:8px;height:8px;border-radius:50%;background:#f43f8a;
+                display:inline-block;box-shadow:0 0 8px rgba(244,63,138,.6);"></span>
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
 
-load_custom_ui()
+def render_mode_banner(mode: str) -> None:
+    meta = MODE_META.get(mode, MODE_META["💬 عام"])
+    st.markdown(f"""
+    <div style="
+        background:{meta['bg']};
+        border-radius:20px;
+        padding:.7rem 1.4rem;
+        border:1px solid {meta['border']};
+        margin-bottom:1rem;
+        text-align:center;
+        backdrop-filter:blur(10px);
+        box-shadow:0 4px 24px {meta['shadow']};
+    ">
+        <span style="color:{meta['fg']};font-weight:700;font-size:.92rem;
+            letter-spacing:0.02em;">{meta['label']}</span>
+    </div>""", unsafe_allow_html=True)
 
-# ── SESSION STATE ───────────────────────────────────────────────
-DEFAULTS = {
-    "messages":       [],
-    "mode":           "💬 عام",
-    "mood":           "😊 سعيدة",
-    "voice_output":   False,
-    "total_messages": 0,
-    "total_files":    0,
-    "file_context":   "",
-    "file_name":      "",
-    "pending_input":  None,
-}
-for k, v in DEFAULTS.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
 
-# ── SIDEBAR ─────────────────────────────────────────────────────
-sidebar = render_sidebar({
-    "mode":           st.session_state.mode,
-    "mood":           st.session_state.mood,
-    "voice_output":   st.session_state.voice_output,
-    "total_messages": st.session_state.total_messages,
-    "total_files":    st.session_state.total_files,
-})
+def render_sidebar(state: dict) -> dict:
+    pending_voice = None
 
-st.session_state.mode         = sidebar["mode"]
-st.session_state.mood         = sidebar["mood"]
-st.session_state.voice_output = sidebar["voice_output"]
+    with st.sidebar:
+        # ── Brand ──────────────────────────────────────────
+        st.markdown("""
+        <div style="text-align:center;padding:.6rem 0 .4rem;">
+            <span style="font-size:2.4rem;display:inline-block;">🌸</span>
+            <h2 style="margin:.2rem 0 0;font-family:'Playfair Display',serif;
+                color:#ff7eb6 !important;font-size:1.7rem;">AYA AI</h2>
+            <p style="font-size:.75rem;color:rgba(255,192,220,0.55);margin:0;">
+                مساعدتك الذكية الشخصية 💕</p>
+        </div>""", unsafe_allow_html=True)
 
-if sidebar.get("pending_voice"):
-    st.session_state.pending_input = sidebar["pending_voice"]
+        st.divider()
 
-if sidebar["clear"]:
-    st.session_state.messages       = []
-    st.session_state.file_context   = ""
-    st.session_state.file_name      = ""
-    st.session_state.pending_input  = None
-    st.session_state.total_messages = 0
-    st.rerun()
+        # ── Mode ──────────────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">✨ الوضع</p>', unsafe_allow_html=True)
+        mode = st.radio(
+            "mode_radio",
+            MODES,
+            index=MODES.index(state.get("mode", "💬 عام")),
+            label_visibility="collapsed",
+        )
 
-# ── HEADER ──────────────────────────────────────────────────────
-render_header()
+        st.divider()
 
-# ── MODE BANNER ─────────────────────────────────────────────────
-render_mode_banner(st.session_state.mode)
+        # ── Mood ──────────────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">💕 كيف حالك؟</p>', unsafe_allow_html=True)
+        mood = st.radio(
+            "mood_radio",
+            MOODS,
+            index=MOODS.index(state.get("mood", "😊 سعيدة")),
+            label_visibility="collapsed",
+        )
 
-# ── CHAT HISTORY ────────────────────────────────────────────────
-render_chat_history()
+        st.divider()
 
-# ── CHAT INPUT ──────────────────────────────────────────────────
-handle_chat_input()
+        # ── Voice output toggle ────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">🔊 الصوت</p>', unsafe_allow_html=True)
+        voice_output = st.toggle(
+            "ردود صوتية تلقائية 🔊",
+            value=state.get("voice_output", False),
+        )
 
-# ── FOOTER ──────────────────────────────────────────────────────
-st.markdown("""
-<div style="text-align:center;padding:2.5rem 0 .5rem;
-    color:rgba(255,192,220,0.35);font-size:.72rem;letter-spacing:.06em;">
-    Made with 💕 for Aya &nbsp;•&nbsp; AYA AI ✨ &nbsp;•&nbsp; Powered by Groq ⚡
-</div>
-""", unsafe_allow_html=True)
+        st.divider()
+
+        # ── File Upload ───────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">📎 رفع ملف</p>', unsafe_allow_html=True)
+        st.markdown(
+            '<p style="color:rgba(255,192,220,0.5);font-size:.73rem;margin-bottom:.4rem;">'
+            'PDF، Word، كود، صور 🌸</p>',
+            unsafe_allow_html=True,
+        )
+        uploaded = st.file_uploader(
+            "upload_sidebar",
+            type=["pdf", "docx", "txt", "md", "py", "cpp", "c", "h", "js", "ts",
+                  "java", "json", "csv", "xml", "html", "css", "sql", "yaml", "yml",
+                  "png", "jpg", "jpeg", "webp", "gif"],
+            label_visibility="collapsed",
+        )
+        if uploaded:
+            extracted, label = extract_text_from_file(uploaded)
+            st.session_state.file_context = build_file_context(extracted, label, uploaded.name)
+            st.session_state.file_name    = uploaded.name
+            st.session_state.total_files += 1
+            st.success(f"✅ {label}: **{uploaded.name}** 🌸")
+
+        if st.session_state.get("file_name"):
+            st.markdown(
+                f'<div style="background:rgba(244,67,138,0.1);border-radius:12px;'
+                f'padding:.4rem .9rem;font-size:.78rem;'
+                f'color:rgba(255,192,220,0.85);border:1px solid rgba(244,67,138,0.25);">'
+                f'📎 <b style="color:#ff7eb6;">{st.session_state.file_name}</b></div>',
+                unsafe_allow_html=True,
+            )
+
+        st.divider()
+
+        # ── Voice Input ───────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:4px;letter-spacing:.02em;">🎙️ رسالة صوتية</p>', unsafe_allow_html=True)
+
+        try:
+            audio_value = st.audio_input("🎙️ اضغطي لتسجيل رسالة", key="sidebar_audio")
+            if audio_value is not None:
+                with st.spinner("🌸 بتحوّل الكلام لنص..."):
+                    try:
+                        transcribed = transcribe_audio(audio_value.read(), "recording.wav")
+                        if transcribed:
+                            st.success(f"✅ **{transcribed}** ✨")
+                            pending_voice = transcribed
+                    except Exception as e:
+                        st.error(f"😔 مشكلة: {e}")
+        except Exception:
+            voice_upload = st.file_uploader(
+                "📤 ارفعي ملف صوتي",
+                type=["wav", "mp3", "m4a", "ogg", "webm"],
+                key="voice_upload_sidebar",
+            )
+            if voice_upload:
+                with st.spinner("🌸 بتحوّل الكلام لنص..."):
+                    try:
+                        transcribed = transcribe_audio(voice_upload.read(), voice_upload.name)
+                        if transcribed:
+                            st.success(f"✅ **{transcribed}** ✨")
+                            pending_voice = transcribed
+                    except Exception as e:
+                        st.error(f"😔 مشكلة: {e}")
+
+        st.divider()
+
+        # ── Stats ─────────────────────────────────────────
+        st.markdown('<p style="color:rgba(255,192,220,0.85);font-size:.82rem;font-weight:700;margin-bottom:6px;letter-spacing:.02em;">📊 إحصائياتك</p>', unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("💬 رسائل", state.get("total_messages", 0))
+        with col2:
+            st.metric("📁 ملفات", state.get("total_files", 0))
+
+        st.divider()
+
+        clear = st.button("🗑️ مسح المحادثة", use_container_width=True)
+
+        st.markdown(f"""
+        <div style="text-align:center;padding:1rem 0 0;
+            color:rgba(255,192,220,0.35);font-size:.7rem;line-height:2;">
+            Made with 💕 especially for Aya<br>
+            Powered by <b style="color:rgba(255,192,220,0.55);">Groq</b> ⚡<br>
+            <span style="font-size:.65rem;opacity:.7;">v{APP_VERSION}</span>
+        </div>""", unsafe_allow_html=True)
+
+    return {
+        "mode": mode,
+        "mood": mood,
+        "voice_output": voice_output,
+        "clear": clear,
+        "pending_voice": pending_voice,
+    }
