@@ -6,6 +6,7 @@ API key is loaded from .env automatically — no user input needed!
 
 import streamlit as st
 
+# 1. PAGE CONFIG (Must be the very first Streamlit command)
 st.set_page_config(
     page_title="AYA AI ✨",
     page_icon="🌸",
@@ -292,7 +293,7 @@ def load_custom_ui():
     .stDeployButton { display: none; }
     header[data-testid="stHeader"] { background: transparent !important; }
 
-    /* ── CUTE SPARKLE CURSOR ── (optional fun) ── */
+    /* ── CUTE SPARKLE CURSOR ── */
     @keyframes blink {
         0%,100% { opacity:1; transform:scale(1); }
         50%      { opacity:.3; transform:scale(.6); }
@@ -305,55 +306,58 @@ load_custom_ui()
 
 # ── SESSION STATE ───────────────────────────────────────────────
 DEFAULTS = {
-    "messages":       [],
-    "mode":           "💬 عام",
-    "mood":           "😊 سعيدة",
-    "voice_output":   False,
+    "messages":        [],
+    "mode":            "💬 عام",
+    "mood":            "😊 سعيدة",
+    "voice_output":    False,
     "total_messages": 0,
-    "total_files":    0,
-    "file_context":   "",
-    "file_name":      "",
-    "pending_input":  None,
+    "total_files":     0,
+    "file_context":    "",
+    "file_name":       "",
+    "pending_input":   None,
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
 # ── SIDEBAR ─────────────────────────────────────────────────────
-sidebar = render_sidebar({
-    "mode":           st.session_state.mode,
-    "mood":           st.session_state.mood,
-    "voice_output":   st.session_state.voice_output,
-    "total_messages": st.session_state.total_messages,
-    "total_files":    st.session_state.total_files,
-})
+# We pass the current state to the renderer
+sidebar_results = render_sidebar(st.session_state)
 
-st.session_state.mode         = sidebar["mode"]
-st.session_state.mood         = sidebar["mood"]
-st.session_state.voice_output = sidebar["voice_output"]
+# Update state based on sidebar interactions
+st.session_state.mode         = sidebar_results["mode"]
+st.session_state.mood         = sidebar_results["mood"]
+st.session_state.voice_output = sidebar_results["voice_output"]
 
-if sidebar.get("pending_voice"):
-    st.session_state.pending_input = sidebar["pending_voice"]
-
-if sidebar["clear"]:
-    st.session_state.messages       = []
-    st.session_state.file_context   = ""
-    st.session_state.file_name      = ""
-    st.session_state.pending_input  = None
+# Priority: Handle clearing the chat
+if sidebar_results["clear"]:
+    for key in ["messages", "file_context", "file_name", "pending_input"]:
+        st.session_state[key] = DEFAULTS[key]
     st.session_state.total_messages = 0
     st.rerun()
 
-# ── HEADER ──────────────────────────────────────────────────────
-render_header()
+# Capture pending voice transcription
+if sidebar_results.get("pending_voice"):
+    st.session_state.pending_input = sidebar_results["pending_voice"]
 
-# ── MODE BANNER ─────────────────────────────────────────────────
+# ── HEADER & BANNER ────────────────────────────────────────────
+render_header()
 render_mode_banner(st.session_state.mode)
 
 # ── CHAT HISTORY ────────────────────────────────────────────────
 render_chat_history()
 
-# ── CHAT INPUT ──────────────────────────────────────────────────
-handle_chat_input()
+# ── CHAT INPUT HANDLING ─────────────────────────────────────────
+# Handle either the pending voice input or the standard text input
+if st.session_state.pending_input:
+    # Trigger processing with the transcribed text
+    handle_chat_input(st.session_state.pending_input)
+    # Reset pending input and refresh to show the message in history
+    st.session_state.pending_input = None
+    st.rerun()
+else:
+    # Standard text input interaction
+    handle_chat_input()
 
 # ── FOOTER ──────────────────────────────────────────────────────
 st.markdown("""
